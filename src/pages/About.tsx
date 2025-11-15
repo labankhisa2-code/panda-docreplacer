@@ -36,7 +36,7 @@ const About = () => {
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-                About <span className="bg-gradient-primary bg-clip-text text-transparent">Panda Tech</span>
+                About <span className="bg-gradient-primary bg-clip-text text-transparent">5str Documents</span>
               </h1>
               <p className="text-lg text-muted-foreground">
                 Your trusted partner for academic document replacement services in Kenya
@@ -46,7 +46,7 @@ const About = () => {
             <Card className="p-8 shadow-card bg-card border-border mb-12">
               <h2 className="text-2xl font-bold text-foreground mb-4">Our Mission</h2>
               <p className="text-muted-foreground mb-6">
-                At Panda Tech Document Replacement, we understand the stress and frustration that comes with 
+                At 5str Documents, we understand the stress and frustration that comes with 
                 losing important academic documents. Our mission is to simplify and expedite the replacement 
                 process, providing a reliable bridge between you and your educational institutions.
               </p>

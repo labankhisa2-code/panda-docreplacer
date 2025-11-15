@@ -1,10 +1,53 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, FileText } from "lucide-react";
-import { useState } from "react";
+import { Menu, X, FileText, LogOut, User, Settings } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Navigation = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    checkUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        checkAdminRole(session.user.id);
+      } else {
+        setIsAdmin(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const checkUser = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      setUser(session.user);
+      await checkAdminRole(session.user.id);
+    }
+  };
+
+  const checkAdminRole = async (userId: string) => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+
+    setIsAdmin(data && data.length > 0);
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setIsAdmin(false);
+    navigate("/");
+  };
 
   const navLinks = [
     { to: "/", label: "Home" },
@@ -22,7 +65,7 @@ const Navigation = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 font-bold text-xl text-primary hover:text-primary-glow transition-colors">
             <FileText className="w-6 h-6" />
-            <span>Panda Tech</span>
+            <span>5str Documents</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -34,11 +77,34 @@ const Navigation = () => {
                 </Button>
               </Link>
             ))}
-            <Link to="/admin">
-              <Button variant="outline" className="ml-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground">
-                Admin
-              </Button>
-            </Link>
+            
+            {user ? (
+              <>
+                {isAdmin && (
+                  <Link to="/admin">
+                    <Button variant="ghost" className="gap-2 text-foreground hover:text-primary hover:bg-primary-light/20">
+                      <Settings className="w-4 h-4" />
+                      Admin Dashboard
+                    </Button>
+                  </Link>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={handleSignOut}
+                  className="ml-2 gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <Link to="/auth">
+                <Button variant="outline" className="ml-2 gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground">
+                  <User className="w-4 h-4" />
+                  Sign In
+                </Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -60,11 +126,37 @@ const Navigation = () => {
                 </Button>
               </Link>
             ))}
-            <Link to="/admin" onClick={() => setIsOpen(false)}>
-              <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground">
-                Admin
-              </Button>
-            </Link>
+            
+            {user ? (
+              <>
+                {isAdmin && (
+                  <Link to="/admin" onClick={() => setIsOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start gap-2 text-foreground hover:text-primary hover:bg-primary-light/20">
+                      <Settings className="w-4 h-4" />
+                      Admin Dashboard
+                    </Button>
+                  </Link>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    handleSignOut();
+                    setIsOpen(false);
+                  }}
+                  className="w-full justify-start gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <Link to="/auth" onClick={() => setIsOpen(false)}>
+                <Button variant="outline" className="w-full justify-start gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground">
+                  <User className="w-4 h-4" />
+                  Sign In
+                </Button>
+              </Link>
+            )}
           </div>
         )}
       </div>
