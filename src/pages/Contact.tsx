@@ -1,0 +1,199 @@
+import { useState } from "react";
+import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { Mail, Phone, Globe, MapPin, MessageSquare } from "lucide-react";
+
+const Contact = () => {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    message: "",
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({
+      title: "Message Sent!",
+      description: "We'll get back to you as soon as possible.",
+    });
+    setFormData({ name: "", email: "", phone: "", message: "" });
+  };
+
+  const contactInfo = [
+    {
+      icon: Phone,
+      title: "Phone",
+      details: ["0111679286", "0793923427"],
+      link: "tel:0111679286",
+    },
+    {
+      icon: Mail,
+      title: "Email",
+      details: ["info@labankhisa.co.ke"],
+      link: "mailto:info@labankhisa.co.ke",
+    },
+    {
+      icon: Globe,
+      title: "Website",
+      details: ["pandatech.labankhisa.co.ke"],
+      link: "https://pandatech.labankhisa.co.ke",
+    },
+    {
+      icon: MapPin,
+      title: "Location",
+      details: ["Nairobi, Kenya"],
+      link: null,
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-subtle">
+      <Navigation />
+
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+                Get In <span className="bg-gradient-primary bg-clip-text text-transparent">Touch</span>
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Have questions? We're here to help. Reach out to us through any of the channels below.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+              {/* Contact Information */}
+              <div className="space-y-6">
+                <Card className="p-6 shadow-card bg-card border-border">
+                  <h2 className="text-2xl font-bold text-foreground mb-6">Contact Information</h2>
+                  <div className="space-y-6">
+                    {contactInfo.map((info, idx) => (
+                      <div key={idx} className="flex items-start gap-4">
+                        <div className="p-3 bg-gradient-primary rounded-lg text-primary-foreground">
+                          <info.icon className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-foreground mb-1">{info.title}</h3>
+                          {info.details.map((detail, didx) => (
+                            <p key={didx} className="text-muted-foreground text-sm">
+                              {info.link ? (
+                                <a href={info.link} className="hover:text-primary transition-colors">
+                                  {detail}
+                                </a>
+                              ) : (
+                                detail
+                              )}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+
+                <Card className="p-6 bg-gradient-gold text-accent-foreground shadow-gold">
+                  <div className="flex items-center gap-3 mb-4">
+                    <MessageSquare className="w-6 h-6" />
+                    <h3 className="text-xl font-bold">WhatsApp Support</h3>
+                  </div>
+                  <p className="mb-4 text-accent-foreground/90">
+                    Get instant support through WhatsApp. Our team is available to answer your questions.
+                  </p>
+                  <a 
+                    href="https://wa.me/254111679286" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                  >
+                    <Button className="w-full bg-accent-foreground text-accent hover:bg-accent-foreground/90">
+                      Chat on WhatsApp
+                    </Button>
+                  </a>
+                </Card>
+              </div>
+
+              {/* Contact Form */}
+              <Card className="p-6 shadow-card bg-card border-border">
+                <h2 className="text-2xl font-bold text-foreground mb-6">Send Us a Message</h2>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <Label htmlFor="name">Your Name *</Label>
+                    <Input
+                      id="name"
+                      required
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Enter your name"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="email">Email Address *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="your.email@example.com"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="0712345678"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="message">Message *</Label>
+                    <Textarea
+                      id="message"
+                      required
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      placeholder="How can we help you?"
+                      className="min-h-32"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-primary hover:opacity-90 shadow-elegant text-primary-foreground"
+                  >
+                    Send Message
+                  </Button>
+                </form>
+              </Card>
+            </div>
+
+            {/* Office Hours */}
+            <Card className="p-6 text-center bg-primary-light/20 border-primary/20">
+              <h3 className="font-semibold text-lg text-foreground mb-2">Office Hours</h3>
+              <p className="text-muted-foreground">
+                Monday - Friday: 8:00 AM - 6:00 PM
+                <br />
+                Saturday: 9:00 AM - 2:00 PM
+                <br />
+                Sunday: Closed
+              </p>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
+    </div>
+  );
+};
+
+export default Contact;
