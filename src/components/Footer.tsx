@@ -10,7 +10,7 @@ const Footer = () => {
           <div>
             <div className="flex items-center gap-2 font-bold text-xl mb-4">
               <FileText className="w-6 h-6" />
-              <span>Panda Tech</span>
+              <span>5str Documents</span>
             </div>
             <p className="text-primary-foreground/80 text-sm">
               Fast & Secure Academic Certificate & Document Replacement Services
@@ -65,7 +65,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-primary-foreground/20 mt-8 pt-8 text-center text-sm text-primary-foreground/80">
-          <p>&copy; {new Date().getFullYear()} Panda Tech Document Replacement. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} 5str Documents. All rights reserved.</p>
         </div>
       </div>
     </footer>

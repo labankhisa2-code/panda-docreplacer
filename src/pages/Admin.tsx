@@ -35,9 +35,6 @@ const Admin = () => {
   const [filteredApplications, setFilteredApplications] = useState<Application[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loggingIn, setLoggingIn] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -65,53 +62,19 @@ const Admin = () => {
 
         if (roles && roles.length > 0) {
           setUser(session.user);
+        } else {
+          // Not an admin, redirect to home
+          navigate("/");
         }
+      } else {
+        // Not logged in, redirect to auth
+        navigate("/auth");
       }
     } catch (error) {
       console.error("Error checking user:", error);
+      navigate("/auth");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoggingIn(true);
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        // Check if user has admin role
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", data.user.id);
-
-        if (!roles || roles.length === 0) {
-          await supabase.auth.signOut();
-          throw new Error("Unauthorized: Admin access required");
-        }
-
-        setUser(data.user);
-        toast({
-          title: "Login Successful",
-          description: "Welcome to the admin dashboard",
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Login Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoggingIn(false);
     }
   };
 
@@ -212,55 +175,7 @@ const Admin = () => {
   }
 
   if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
-        <Card className="w-full max-w-md p-8 shadow-card bg-card border-border">
-          <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Admin Login</h1>
-            <p className="text-muted-foreground">Sign in to access the dashboard</p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@pandatech.com"
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-              />
-            </div>
-            <Button
-              type="submit"
-              className="w-full bg-gradient-primary hover:opacity-90 text-primary-foreground"
-              disabled={loggingIn}
-            >
-              {loggingIn ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Signing In...
-                </>
-              ) : (
-                "Sign In"
-              )}
-            </Button>
-          </form>
-        </Card>
-      </div>
-    );
+    return null; // Will redirect
   }
 
   return (
