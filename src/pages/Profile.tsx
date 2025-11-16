@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import ChatInterface from "@/components/ChatInterface";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, User, FileText, Settings, Save } from "lucide-react";
+import { Loader2, User, FileText, Settings, Save, MessageSquare } from "lucide-react";
 
 interface Profile {
   id: string;
@@ -36,6 +37,7 @@ const Profile = () => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     fullName: "",
     phone: "",
@@ -60,6 +62,7 @@ const Profile = () => {
       setFormData(prev => ({ ...prev, email: session.user.email || "" }));
       await fetchProfile(session.user.id);
       await fetchApplications(session.user.email || "");
+      await fetchAdminUsers();
     } catch (error) {
       console.error("Error checking user:", error);
     } finally {
@@ -112,6 +115,29 @@ const Profile = () => {
       setApplications(data || []);
     } catch (error) {
       console.error("Error fetching applications:", error);
+    }
+  };
+
+  const fetchAdminUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const adminIds = data.map((r) => r.user_id);
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("*")
+          .in("user_id", adminIds);
+
+        setAdminUsers(profiles || []);
+      }
+    } catch (error) {
+      console.error("Error fetching admin users:", error);
     }
   };
 
@@ -236,7 +262,7 @@ const Profile = () => {
             </div>
 
             <Tabs defaultValue="personal" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="personal" className="gap-2">
                   <User className="w-4 h-4" />
                   Personal Info
@@ -244,6 +270,10 @@ const Profile = () => {
                 <TabsTrigger value="applications" className="gap-2">
                   <FileText className="w-4 h-4" />
                   Applications
+                </TabsTrigger>
+                <TabsTrigger value="messages" className="gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  Messages
                 </TabsTrigger>
                 <TabsTrigger value="settings" className="gap-2">
                   <Settings className="w-4 h-4" />
@@ -358,6 +388,24 @@ const Profile = () => {
                         </Card>
                       ))}
                     </div>
+                  )}
+                </Card>
+              </TabsContent>
+
+              {/* Messages Tab */}
+              <TabsContent value="messages">
+                <Card className="p-6 shadow-card bg-card border-border">
+                  <h3 className="text-lg font-semibold text-foreground mb-4">Chat with Support</h3>
+                  {adminUsers.length > 0 && user ? (
+                    <ChatInterface
+                      currentUserId={user.id}
+                      otherUserId={adminUsers[0].user_id}
+                      otherUserName={adminUsers[0].full_name || "Admin Support"}
+                    />
+                  ) : (
+                    <p className="text-muted-foreground text-center py-8">
+                      No support staff available at the moment.
+                    </p>
                   )}
                 </Card>
               </TabsContent>

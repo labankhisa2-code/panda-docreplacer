@@ -1,4 +1,4 @@
-import { Mail, Phone, Globe, FileText } from "lucide-react";
+import { Mail, Globe, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Footer = () => {
@@ -49,16 +49,12 @@ const Footer = () => {
             <h3 className="font-semibold text-lg mb-4">Contact Us</h3>
             <ul className="space-y-2 text-sm text-primary-foreground/80">
               <li className="flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                <span>0111679286 / 0793923427</span>
-              </li>
-              <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
                 <span>info@labankhisa.co.ke</span>
               </li>
               <li className="flex items-center gap-2">
                 <Globe className="w-4 h-4" />
-                <span>pandatech.labankhisa.co.ke</span>
+                <span>5str-docs.its-mycardio.co.ke</span>
               </li>
             </ul>
           </div>

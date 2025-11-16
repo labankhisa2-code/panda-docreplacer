@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
+import ChatInterface from "@/components/ChatInterface";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, LogOut, Search, Filter } from "lucide-react";
+import { Loader2, LogOut, Search, Filter, LayoutDashboard, FileText, MessageSquare, Users } from "lucide-react";
 
 interface Application {
   id: string;
@@ -35,6 +37,8 @@ const Admin = () => {
   const [filteredApplications, setFilteredApplications] = useState<Application[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [customerUsers, setCustomerUsers] = useState<any[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
 
   useEffect(() => {
     checkUser();
@@ -43,6 +47,7 @@ const Admin = () => {
   useEffect(() => {
     if (user) {
       fetchApplications();
+      fetchCustomerUsers();
     }
   }, [user]);
 
@@ -103,6 +108,29 @@ const Admin = () => {
         description: "Failed to fetch applications",
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchCustomerUsers = async () => {
+    try {
+      const { data: profiles, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Filter out admin users
+      const { data: adminRoles } = await supabase
+        .from("user_roles")
+        .select("user_id");
+
+      const adminIds = adminRoles?.map((r) => r.user_id) || [];
+      const customers = profiles?.filter((p) => !adminIds.includes(p.user_id)) || [];
+
+      setCustomerUsers(customers);
+    } catch (error) {
+      console.error("Error fetching customer users:", error);
     }
   };
 
@@ -189,7 +217,7 @@ const Admin = () => {
               <h1 className="text-3xl md:text-4xl font-bold text-foreground">
                 Admin <span className="bg-gradient-primary bg-clip-text text-transparent">Dashboard</span>
               </h1>
-              <p className="text-muted-foreground">Manage document replacement applications</p>
+              <p className="text-muted-foreground">Manage applications and customer support</p>
             </div>
             <Button onClick={handleLogout} variant="outline" className="gap-2">
               <LogOut className="w-4 h-4" />
@@ -197,8 +225,25 @@ const Admin = () => {
             </Button>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Tabs defaultValue="dashboard" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-8">
+              <TabsTrigger value="dashboard" className="gap-2">
+                <LayoutDashboard className="w-4 h-4" />
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="applications" className="gap-2">
+                <FileText className="w-4 h-4" />
+                Applications
+              </TabsTrigger>
+              <TabsTrigger value="messages" className="gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Messages
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Dashboard Tab */}
+            <TabsContent value="dashboard">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="p-6 bg-card border-border">
               <p className="text-sm text-muted-foreground mb-1">Total Applications</p>
               <p className="text-3xl font-bold text-foreground">{applications.length}</p>
@@ -222,8 +267,10 @@ const Admin = () => {
               </p>
             </Card>
           </div>
+            </TabsContent>
 
-          {/* Filters */}
+            {/* Applications Tab */}
+            <TabsContent value="applications">
           <Card className="p-6 mb-6 bg-card border-border">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
@@ -323,6 +370,71 @@ const Admin = () => {
               </Table>
             </div>
           </Card>
+            </TabsContent>
+
+            {/* Messages Tab */}
+            <TabsContent value="messages">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Customer List */}
+                <Card className="p-4 bg-card border-border lg:col-span-1">
+                  <h3 className="font-semibold text-lg text-foreground mb-4 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-primary" />
+                    Customers
+                  </h3>
+                  <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                    {customerUsers.length === 0 ? (
+                      <p className="text-muted-foreground text-sm text-center py-4">
+                        No customers yet
+                      </p>
+                    ) : (
+                      customerUsers.map((customer) => (
+                        <button
+                          key={customer.id}
+                          onClick={() => setSelectedCustomer(customer.user_id)}
+                          className={`w-full text-left p-3 rounded-lg transition-all ${
+                            selectedCustomer === customer.user_id
+                              ? "bg-primary-light/30 border-2 border-primary"
+                              : "bg-muted hover:bg-muted/80 border border-border"
+                          }`}
+                        >
+                          <p className="font-medium text-foreground">
+                            {customer.full_name || "Unknown User"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </Card>
+
+                {/* Chat Interface */}
+                <div className="lg:col-span-2">
+                  {selectedCustomer ? (
+                    <ChatInterface
+                      currentUserId={user.id}
+                      otherUserId={selectedCustomer}
+                      otherUserName={
+                        customerUsers.find((c) => c.user_id === selectedCustomer)?.full_name ||
+                        "Customer"
+                      }
+                    />
+                  ) : (
+                    <Card className="p-12 bg-card border-border flex items-center justify-center h-[600px]">
+                      <div className="text-center">
+                        <MessageSquare className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-xl font-semibold text-foreground mb-2">
+                          Select a Customer
+                        </h3>
+                        <p className="text-muted-foreground">
+                          Choose a customer from the list to start chatting
+                        </p>
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </section>
     </div>
