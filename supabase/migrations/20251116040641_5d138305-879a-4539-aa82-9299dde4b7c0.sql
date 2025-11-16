@@ -1,0 +1,56 @@
+-- Create profiles table
+CREATE TABLE public.profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
+  full_name TEXT,
+  phone TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- Users can view their own profile
+CREATE POLICY "Users can view own profile"
+ON public.profiles FOR SELECT
+TO authenticated
+USING (auth.uid() = user_id);
+
+-- Users can update their own profile
+CREATE POLICY "Users can update own profile"
+ON public.profiles FOR UPDATE
+TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+-- Users can insert their own profile
+CREATE POLICY "Users can insert own profile"
+ON public.profiles FOR INSERT
+TO authenticated
+WITH CHECK (auth.uid() = user_id);
+
+-- Function to handle new user profile creation
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.profiles (user_id, full_name)
+  VALUES (NEW.id, NEW.raw_user_meta_data->>'full_name');
+  RETURN NEW;
+END;
+$$;
+
+-- Trigger to auto-create profile on user signup
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Add trigger for updated_at
+CREATE TRIGGER profiles_updated_at_trigger
+BEFORE UPDATE ON public.profiles
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();

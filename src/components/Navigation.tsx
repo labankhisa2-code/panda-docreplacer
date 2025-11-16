@@ -58,6 +58,13 @@ const Navigation = () => {
     { to: "/contact", label: "Contact" },
   ];
 
+  const authenticatedLinks = user
+    ? [
+        { to: "/profile", label: "My Profile" },
+        ...(isAdmin ? [{ to: "/admin", label: "Admin Dashboard" }] : []),
+      ]
+    : [];
+
   return (
     <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm">
       <div className="container mx-auto px-4">
@@ -77,26 +84,23 @@ const Navigation = () => {
                 </Button>
               </Link>
             ))}
+            {authenticatedLinks.map((link) => (
+              <Link key={link.to} to={link.to}>
+                <Button variant="ghost" className="text-foreground hover:text-primary hover:bg-primary-light/20">
+                  {link.label}
+                </Button>
+              </Link>
+            ))}
             
             {user ? (
-              <>
-                {isAdmin && (
-                  <Link to="/admin">
-                    <Button variant="ghost" className="gap-2 text-foreground hover:text-primary hover:bg-primary-light/20">
-                      <Settings className="w-4 h-4" />
-                      Admin Dashboard
-                    </Button>
-                  </Link>
-                )}
-                <Button
-                  variant="outline"
-                  onClick={handleSignOut}
-                  className="ml-2 gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Sign Out
-                </Button>
-              </>
+              <Button
+                variant="outline"
+                onClick={handleSignOut}
+                className="ml-2 gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </Button>
             ) : (
               <Link to="/auth">
                 <Button variant="outline" className="ml-2 gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground">
@@ -126,29 +130,26 @@ const Navigation = () => {
                 </Button>
               </Link>
             ))}
+            {authenticatedLinks.map((link) => (
+              <Link key={link.to} to={link.to} onClick={() => setIsOpen(false)}>
+                <Button variant="ghost" className="w-full justify-start text-foreground hover:text-primary hover:bg-primary-light/20">
+                  {link.label}
+                </Button>
+              </Link>
+            ))}
             
             {user ? (
-              <>
-                {isAdmin && (
-                  <Link to="/admin" onClick={() => setIsOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start gap-2 text-foreground hover:text-primary hover:bg-primary-light/20">
-                      <Settings className="w-4 h-4" />
-                      Admin Dashboard
-                    </Button>
-                  </Link>
-                )}
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    handleSignOut();
-                    setIsOpen(false);
-                  }}
-                  className="w-full justify-start gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Sign Out
-                </Button>
-              </>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  handleSignOut();
+                  setIsOpen(false);
+                }}
+                className="w-full justify-start gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </Button>
             ) : (
               <Link to="/auth" onClick={() => setIsOpen(false)}>
                 <Button variant="outline" className="w-full justify-start gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground">
