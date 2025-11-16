@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Phone, Globe, MapPin, MessageSquare } from "lucide-react";
+import { Mail, Globe, MapPin, MessageSquare } from "lucide-react";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -29,12 +30,6 @@ const Contact = () => {
 
   const contactInfo = [
     {
-      icon: Phone,
-      title: "Phone",
-      details: ["0111679286", "0793923427"],
-      link: "tel:0111679286",
-    },
-    {
       icon: Mail,
       title: "Email",
       details: ["info@labankhisa.co.ke"],
@@ -43,8 +38,8 @@ const Contact = () => {
     {
       icon: Globe,
       title: "Website",
-      details: ["pandatech.labankhisa.co.ke"],
-      link: "https://pandatech.labankhisa.co.ke",
+      details: ["5str-docs.its-mycardio.co.ke"],
+      link: "https://5str-docs.its-mycardio.co.ke",
     },
     {
       icon: MapPin,
@@ -106,17 +101,13 @@ const Contact = () => {
                     <h3 className="text-xl font-bold">WhatsApp Support</h3>
                   </div>
                   <p className="mb-4 text-accent-foreground/90">
-                    Get instant support through WhatsApp. Our team is available to answer your questions.
+                    Sign in to your account to chat directly with our support team through the messaging system.
                   </p>
-                  <a 
-                    href="https://wa.me/254111679286" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                  >
+                  <Link to="/auth">
                     <Button className="w-full bg-accent-foreground text-accent hover:bg-accent-foreground/90">
-                      Chat on WhatsApp
+                      Sign In to Chat
                     </Button>
-                  </a>
+                  </Link>
                 </Card>
               </div>
 
