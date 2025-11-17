@@ -34,14 +34,17 @@ const Navigation = () => {
   };
 
   const checkAdminRole = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-
-    setIsAdmin(data && data.length > 0);
+    const { data, error } = await supabase.rpc('has_role', {
+      user_id: userId,
+      check_role: 'admin'
+    });
+    if (error) {
+      console.error('Error checking admin role:', error);
+      setIsAdmin(false);
+      return;
+    }
+    setIsAdmin(Boolean(data));
   };
-
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setUser(null);

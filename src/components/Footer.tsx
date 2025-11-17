@@ -1,7 +1,35 @@
+import { useEffect, useState } from "react";
 import { Mail, Globe, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Footer = () => {
+  const [settings, setSettings] = useState({
+    contact_email: "",
+    website_url: "",
+    location: "",
+    footer_text: "Fast & Secure Academic Certificate & Document Replacement Services",
+  });
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from('site_settings')
+        .select('*')
+        .eq('id', 'default')
+        .maybeSingle();
+      if (data) {
+        setSettings({
+          contact_email: data.contact_email || "",
+          website_url: data.website_url || "",
+          location: data.location || "",
+          footer_text: data.footer_text || settings.footer_text,
+        });
+      }
+    };
+    load();
+  }, []);
+
   return (
     <footer className="bg-primary text-primary-foreground mt-20">
       <div className="container mx-auto px-4 py-12">
@@ -13,7 +41,7 @@ const Footer = () => {
               <span>5str Documents</span>
             </div>
             <p className="text-primary-foreground/80 text-sm">
-              Fast & Secure Academic Certificate & Document Replacement Services
+              {settings.footer_text}
             </p>
           </div>
 
@@ -50,11 +78,11 @@ const Footer = () => {
             <ul className="space-y-2 text-sm text-primary-foreground/80">
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
-                <span>info@labankhisa.co.ke</span>
+                <span>{settings.contact_email || '—'}</span>
               </li>
               <li className="flex items-center gap-2">
                 <Globe className="w-4 h-4" />
-                <span>5str-docs.its-mycardio.co.ke</span>
+                <span>{settings.website_url || '5str-docs.its-mycardio.co.ke'}</span>
               </li>
             </ul>
           </div>
