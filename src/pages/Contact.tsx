@@ -165,11 +165,6 @@ const Contact = () => {
                       rows={6}
                     />
                   </div>
-                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      placeholder="How can we help you?"
-                      className="min-h-32"
-                    />
-                  </div>
                   <Button
                     type="submit"
                     className="w-full bg-gradient-primary hover:opacity-90 shadow-elegant text-primary-foreground"
