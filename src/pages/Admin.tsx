@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, LogOut, Search, Filter, LayoutDashboard, FileText, MessageSquare, Users } from "lucide-react";
+import { Loader2, LogOut, Search, Filter, LayoutDashboard, FileText, MessageSquare, Users, Settings } from "lucide-react";
 
 interface Application {
   id: string;
@@ -39,6 +40,12 @@ const Admin = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [customerUsers, setCustomerUsers] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
+  const [settings, setSettings] = useState({
+    contact_email: "",
+    website_url: "",
+    location: "",
+    footer_text: "",
+  });
 
   useEffect(() => {
     checkUser();
@@ -48,6 +55,7 @@ const Admin = () => {
     if (user) {
       fetchApplications();
       fetchCustomerUsers();
+      fetchSettings();
     }
   }, [user]);
 
@@ -60,16 +68,16 @@ const Admin = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         // Check if user has admin role
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id);
+        const { data: isAdmin, error: roleErr } = await supabase.rpc('has_role', {
+          user_id: session.user.id,
+          check_role: 'admin'
+        });
 
-        if (roles && roles.length > 0) {
-          setUser(session.user);
-        } else {
+        if (roleErr || !isAdmin) {
           // Not an admin, redirect to home
           navigate("/");
+        } else {
+          setUser(session.user);
         }
       } else {
         // Not logged in, redirect to auth
@@ -111,6 +119,27 @@ const Admin = () => {
     }
   };
 
+  const fetchSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('*')
+        .eq('id', 'default')
+        .maybeSingle();
+      if (error) throw error;
+      if (data) {
+        setSettings({
+          contact_email: data.contact_email || '',
+          website_url: data.website_url || '',
+          location: data.location || '',
+          footer_text: data.footer_text || '',
+        });
+      }
+    } catch (e) {
+      console.error('Error fetching settings:', e);
+    }
+  };
+
   const fetchCustomerUsers = async () => {
     try {
       const { data: profiles, error } = await supabase
@@ -123,7 +152,8 @@ const Admin = () => {
       // Filter out admin users
       const { data: adminRoles } = await supabase
         .from("user_roles")
-        .select("user_id");
+        .select("user_id")
+        .eq("role", "admin");
 
       const adminIds = adminRoles?.map((r) => r.user_id) || [];
       const customers = profiles?.filter((p) => !adminIds.includes(p.user_id)) || [];
@@ -226,7 +256,7 @@ const Admin = () => {
           </div>
 
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8">
+            <TabsList className="grid w-full grid-cols-4 mb-8">
               <TabsTrigger value="dashboard" className="gap-2">
                 <LayoutDashboard className="w-4 h-4" />
                 Dashboard
@@ -238,6 +268,10 @@ const Admin = () => {
               <TabsTrigger value="messages" className="gap-2">
                 <MessageSquare className="w-4 h-4" />
                 Messages
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="gap-2">
+                <Settings className="w-4 h-4" />
+                Settings
               </TabsTrigger>
             </TabsList>
 
@@ -433,6 +467,67 @@ const Admin = () => {
                   )}
                 </div>
               </div>
+            </TabsContent>
+
+            {/* Settings Tab */}
+            <TabsContent value="settings">
+              <Card className="p-6 bg-card border-border max-w-3xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="contact_email">Contact Email</Label>
+                    <Input
+                      id="contact_email"
+                      type="email"
+                      value={settings.contact_email}
+                      onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })}
+                      placeholder="info@example.com"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="website_url">Website URL</Label>
+                    <Input
+                      id="website_url"
+                      value={settings.website_url}
+                      onChange={(e) => setSettings({ ...settings, website_url: e.target.value })}
+                      placeholder="https://yourdomain.com"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="location">Location</Label>
+                    <Input
+                      id="location"
+                      value={settings.location}
+                      onChange={(e) => setSettings({ ...settings, location: e.target.value })}
+                      placeholder="City, Country"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="footer_text">Footer Text</Label>
+                    <Textarea
+                      id="footer_text"
+                      value={settings.footer_text}
+                      onChange={(e) => setSettings({ ...settings, footer_text: e.target.value })}
+                      placeholder="Short tagline for the footer"
+                    />
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <Button
+                    onClick={async () => {
+                      const { error } = await supabase
+                        .from('site_settings')
+                        .upsert({ id: 'default', ...settings });
+                      if (error) {
+                        toast({ title: 'Error', description: 'Failed to save settings', variant: 'destructive' });
+                      } else {
+                        toast({ title: 'Saved', description: 'Settings updated successfully' });
+                      }
+                    }}
+                  >
+                    Save Settings
+                  </Button>
+                </div>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>

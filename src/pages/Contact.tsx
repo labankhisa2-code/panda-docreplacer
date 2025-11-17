@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -9,13 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Globe, MapPin, MessageSquare } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Contact = () => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    phone: "",
     message: "",
   });
 
@@ -25,29 +25,32 @@ const Contact = () => {
       title: "Message Sent!",
       description: "We'll get back to you as soon as possible.",
     });
-    setFormData({ name: "", email: "", phone: "", message: "" });
+    setFormData({ name: "", email: "", message: "" });
   };
 
-  const contactInfo = [
-    {
-      icon: Mail,
-      title: "Email",
-      details: ["info@labankhisa.co.ke"],
-      link: "mailto:info@labankhisa.co.ke",
-    },
-    {
-      icon: Globe,
-      title: "Website",
-      details: ["5str-docs.its-mycardio.co.ke"],
-      link: "https://5str-docs.its-mycardio.co.ke",
-    },
-    {
-      icon: MapPin,
-      title: "Location",
-      details: ["Nairobi, Kenya"],
-      link: null,
-    },
-  ];
+  const [settings, setSettings] = useState({
+    contact_email: "",
+    website_url: "",
+    location: "",
+  });
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from('site_settings')
+        .select('*')
+        .eq('id', 'default')
+        .maybeSingle();
+      if (data) {
+        setSettings({
+          contact_email: data.contact_email || '',
+          website_url: data.website_url || '',
+          location: data.location || '',
+        });
+      }
+    };
+    load();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -71,7 +74,22 @@ const Contact = () => {
                 <Card className="p-6 shadow-card bg-card border-border">
                   <h2 className="text-2xl font-bold text-foreground mb-6">Contact Information</h2>
                   <div className="space-y-6">
-                    {contactInfo.map((info, idx) => (
+                    {[{
+                      icon: Mail,
+                      title: 'Email',
+                      details: [settings.contact_email || '—'],
+                      link: settings.contact_email ? `mailto:${settings.contact_email}` : null,
+                    },{
+                      icon: Globe,
+                      title: 'Website',
+                      details: [settings.website_url || '5str-docs.its-mycardio.co.ke'],
+                      link: settings.website_url || 'https://5str-docs.its-mycardio.co.ke',
+                    },{
+                      icon: MapPin,
+                      title: 'Location',
+                      details: [settings.location || 'Nairobi, Kenya'],
+                      link: null,
+                    }].map((info, idx) => (
                       <div key={idx} className="flex items-start gap-4">
                         <div className="p-3 bg-gradient-primary rounded-lg text-primary-foreground">
                           <info.icon className="w-5 h-5" />
@@ -137,21 +155,16 @@ const Contact = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="0712345678"
-                    />
-                  </div>
-                  <div>
                     <Label htmlFor="message">Message *</Label>
                     <Textarea
                       id="message"
                       required
                       value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      placeholder="How can we help you?"
+                      rows={6}
+                    />
+                  </div>
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       placeholder="How can we help you?"
                       className="min-h-32"
