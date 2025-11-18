@@ -75,6 +75,12 @@ const ChatInterface = ({ currentUserId, otherUserId, otherUserName }: ChatInterf
           if (payload.new.sender_id === otherUserId) {
             setMessages((prev) => [...prev, payload.new as Message]);
             markAsRead();
+            
+            // Show notification for new message
+            toast({
+              title: "New message from " + otherUserName,
+              description: (payload.new as Message).content,
+            });
           }
         }
       )

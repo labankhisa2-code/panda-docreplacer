@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import ChatInterface from "@/components/ChatInterface";
+import DocumentViewer from "@/components/DocumentViewer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ interface Application {
   institution_name: string;
   document_type: string;
   status: string;
+  document_url: string | null;
   created_at: string;
 }
 
@@ -107,7 +109,7 @@ const Profile = () => {
     try {
       const { data, error } = await supabase
         .from("applications")
-        .select("id, tracking_id, institution_name, document_type, status, created_at")
+        .select("id, tracking_id, institution_name, document_type, status, document_url, created_at")
         .eq("email", email)
         .order("created_at", { ascending: false });
 
@@ -262,7 +264,7 @@ const Profile = () => {
             </div>
 
             <Tabs defaultValue="personal" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="personal" className="gap-2">
                   <User className="w-4 h-4" />
                   Personal Info
@@ -270,6 +272,10 @@ const Profile = () => {
                 <TabsTrigger value="applications" className="gap-2">
                   <FileText className="w-4 h-4" />
                   Applications
+                </TabsTrigger>
+                <TabsTrigger value="documents" className="gap-2">
+                  <FileText className="w-4 h-4" />
+                  Documents
                 </TabsTrigger>
                 <TabsTrigger value="messages" className="gap-2">
                   <MessageSquare className="w-4 h-4" />
@@ -389,6 +395,17 @@ const Profile = () => {
                       ))}
                     </div>
                   )}
+                </Card>
+              </TabsContent>
+
+              {/* Documents Tab */}
+              <TabsContent value="documents">
+                <Card className="p-6 shadow-card bg-card border-border">
+                  <h2 className="text-2xl font-bold text-foreground mb-6">My Documents</h2>
+                  <p className="text-muted-foreground mb-6">
+                    Download your completed documents from here.
+                  </p>
+                  <DocumentViewer documents={applications} />
                 </Card>
               </TabsContent>
 
