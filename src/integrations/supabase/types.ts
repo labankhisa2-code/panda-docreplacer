@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string | null
           document_type: Database["public"]["Enums"]["document_type"]
+          document_url: string | null
           email: string
           full_name: string
           id: string
@@ -35,6 +36,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           document_type: Database["public"]["Enums"]["document_type"]
+          document_url?: string | null
           email: string
           full_name: string
           id?: string
@@ -52,6 +54,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           document_type?: Database["public"]["Enums"]["document_type"]
+          document_url?: string | null
           email?: string
           full_name?: string
           id?: string
@@ -95,6 +98,27 @@ export type Database = {
           receiver_id?: string
           sender_id?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      page_views: {
+        Row: {
+          created_at: string
+          id: string
+          page_path: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          page_path: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          page_path?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -175,7 +199,13 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      unread_messages_count: {
+        Row: {
+          receiver_id: string | null
+          unread_count: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_tracking_id: { Args: never; Returns: string }

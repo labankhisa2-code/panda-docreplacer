@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import ChatInterface from "@/components/ChatInterface";
+import DocumentUpload from "@/components/DocumentUpload";
+import StatsCard from "@/components/StatsCard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, LogOut, Search, Filter, LayoutDashboard, FileText, MessageSquare, Users, Settings } from "lucide-react";
+import { Loader2, LogOut, Search, Filter, LayoutDashboard, FileText, MessageSquare, Users, Settings, Eye, Upload } from "lucide-react";
 
 interface Application {
   id: string;
@@ -46,6 +48,8 @@ const Admin = () => {
     location: "",
     footer_text: "",
   });
+  const [pageViews, setPageViews] = useState(0);
+  const [todayViews, setTodayViews] = useState(0);
 
   useEffect(() => {
     checkUser();
@@ -56,6 +60,8 @@ const Admin = () => {
       fetchApplications();
       fetchCustomerUsers();
       fetchSettings();
+      fetchPageViews();
+      subscribeToRealtime();
     }
   }, [user]);
 
@@ -117,6 +123,51 @@ const Admin = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const fetchPageViews = async () => {
+    try {
+      const { count: totalCount } = await supabase
+        .from("page_views")
+        .select("*", { count: "exact", head: true });
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const { count: todayCount } = await supabase
+        .from("page_views")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", today.toISOString());
+
+      setPageViews(totalCount || 0);
+      setTodayViews(todayCount || 0);
+    } catch (error) {
+      console.error("Error fetching page views:", error);
+    }
+  };
+
+  const subscribeToRealtime = () => {
+    const channel = supabase
+      .channel("admin-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "applications" },
+        () => {
+          fetchApplications();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "page_views" },
+        () => {
+          fetchPageViews();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   };
 
   const fetchSettings = async () => {
@@ -277,30 +328,42 @@ const Admin = () => {
 
             {/* Dashboard Tab */}
             <TabsContent value="dashboard">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="p-6 bg-card border-border">
-              <p className="text-sm text-muted-foreground mb-1">Total Applications</p>
-              <p className="text-3xl font-bold text-foreground">{applications.length}</p>
-            </Card>
-            <Card className="p-6 bg-card border-border">
-              <p className="text-sm text-muted-foreground mb-1">Pending</p>
-              <p className="text-3xl font-bold text-accent">
-                {applications.filter((a) => a.status === "received" || a.status === "under_verification").length}
-              </p>
-            </Card>
-            <Card className="p-6 bg-card border-border">
-              <p className="text-sm text-muted-foreground mb-1">Processing</p>
-              <p className="text-3xl font-bold text-primary">
-                {applications.filter((a) => a.status === "processing_at_institution").length}
-              </p>
-            </Card>
-            <Card className="p-6 bg-card border-border">
-              <p className="text-sm text-muted-foreground mb-1">Completed</p>
-              <p className="text-3xl font-bold text-green-600">
-                {applications.filter((a) => a.status === "completed").length}
-              </p>
-            </Card>
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <StatsCard
+                  title="Total Applications"
+                  value={applications.length}
+                  icon={FileText}
+                />
+                <StatsCard
+                  title="Pending"
+                  value={applications.filter((a) => a.status === "received" || a.status === "under_verification").length}
+                  icon={Filter}
+                />
+                <StatsCard
+                  title="Processing"
+                  value={applications.filter((a) => a.status === "processing_at_institution").length}
+                  icon={Loader2}
+                />
+                <StatsCard
+                  title="Completed"
+                  value={applications.filter((a) => a.status === "completed").length}
+                  icon={FileText}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <StatsCard
+                  title="Total Page Views"
+                  value={pageViews}
+                  icon={Eye}
+                  description="All time"
+                />
+                <StatsCard
+                  title="Today's Views"
+                  value={todayViews}
+                  icon={Eye}
+                  description="Real-time tracking"
+                />
+              </div>
             </TabsContent>
 
             {/* Applications Tab */}
@@ -344,7 +407,7 @@ const Admin = () => {
           <Card className="shadow-card bg-card border-border overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
+                  <TableHeader>
                   <TableRow>
                     <TableHead>Tracking ID</TableHead>
                     <TableHead>Name</TableHead>
@@ -354,12 +417,13 @@ const Admin = () => {
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Actions</TableHead>
+                    <TableHead>Upload</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredApplications.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                         No applications found
                       </TableCell>
                     </TableRow>
@@ -396,6 +460,15 @@ const Admin = () => {
                               <SelectItem value="completed">Completed</SelectItem>
                             </SelectContent>
                           </Select>
+                        </TableCell>
+                        <TableCell>
+                          {app.status === "completed" && (
+                            <DocumentUpload
+                              applicationId={app.id}
+                              userId={app.email}
+                              onUploadComplete={fetchApplications}
+                            />
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
