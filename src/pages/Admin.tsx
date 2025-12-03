@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, LogOut, Search, Filter, LayoutDashboard, FileText, MessageSquare, Users, Settings, Eye, Upload, Mail, StickyNote } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface Application {
   id: string;
@@ -495,15 +496,32 @@ const Admin = () => {
                             </TableCell>
                             <TableCell>
                               {app.notes ? (
-                                <div className="max-w-[200px]">
-                                  <div className="flex items-center gap-1 text-primary mb-1">
-                                    <StickyNote className="w-3 h-3" />
-                                    <span className="text-xs font-medium">Notes</span>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground truncate" title={app.notes}>
-                                    {app.notes}
-                                  </p>
-                                </div>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <button className="max-w-[200px] text-left hover:bg-muted p-2 rounded-md transition-colors cursor-pointer">
+                                      <div className="flex items-center gap-1 text-primary mb-1">
+                                        <StickyNote className="w-3 h-3" />
+                                        <span className="text-xs font-medium">View Notes</span>
+                                      </div>
+                                      <p className="text-sm text-muted-foreground truncate">
+                                        {app.notes}
+                                      </p>
+                                    </button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-lg">
+                                    <DialogHeader>
+                                      <DialogTitle className="flex items-center gap-2">
+                                        <StickyNote className="w-5 h-5 text-primary" />
+                                        Notes for {app.tracking_id}
+                                      </DialogTitle>
+                                    </DialogHeader>
+                                    <div className="mt-4">
+                                      <p className="text-sm text-foreground whitespace-pre-wrap">
+                                        {app.notes}
+                                      </p>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
                               ) : (
                                 <span className="text-muted-foreground text-sm">-</span>
                               )}
