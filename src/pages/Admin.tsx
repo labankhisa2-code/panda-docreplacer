@@ -4,6 +4,8 @@ import Navigation from "@/components/Navigation";
 import ChatInterface from "@/components/ChatInterface";
 import DocumentUpload from "@/components/DocumentUpload";
 import StatsCard from "@/components/StatsCard";
+import EmailComposer from "@/components/EmailComposer";
+import EmailSettings from "@/components/EmailSettings";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, LogOut, Search, Filter, LayoutDashboard, FileText, MessageSquare, Users, Settings, Eye, Upload } from "lucide-react";
+import { Loader2, LogOut, Search, Filter, LayoutDashboard, FileText, MessageSquare, Users, Settings, Eye, Upload, Mail, StickyNote } from "lucide-react";
 
 interface Application {
   id: string;
@@ -29,6 +31,7 @@ interface Application {
   payment_confirmed: boolean;
   created_at: string;
   updated_at: string;
+  notes: string | null;
 }
 
 const Admin = () => {
@@ -50,6 +53,7 @@ const Admin = () => {
   });
   const [pageViews, setPageViews] = useState(0);
   const [todayViews, setTodayViews] = useState(0);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     checkUser();
@@ -61,6 +65,7 @@ const Admin = () => {
       fetchCustomerUsers();
       fetchSettings();
       fetchPageViews();
+      fetchUnreadCounts();
       subscribeToRealtime();
     }
   }, [user]);
@@ -73,20 +78,17 @@ const Admin = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        // Check if user has admin role
         const { data: isAdmin, error: roleErr } = await supabase.rpc('has_role', {
           user_id: session.user.id,
           check_role: 'admin'
         });
 
         if (roleErr || !isAdmin) {
-          // Not an admin, redirect to home
           navigate("/");
         } else {
           setUser(session.user);
         }
       } else {
-        // Not logged in, redirect to auth
         navigate("/auth");
       }
     } catch (error) {
@@ -146,6 +148,27 @@ const Admin = () => {
     }
   };
 
+  const fetchUnreadCounts = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("sender_id")
+        .eq("receiver_id", user.id)
+        .eq("is_read", false);
+
+      if (error) throw error;
+
+      const counts: Record<string, number> = {};
+      data?.forEach((msg) => {
+        counts[msg.sender_id] = (counts[msg.sender_id] || 0) + 1;
+      });
+      setUnreadCounts(counts);
+    } catch (error) {
+      console.error("Error fetching unread counts:", error);
+    }
+  };
+
   const subscribeToRealtime = () => {
     const channel = supabase
       .channel("admin-realtime")
@@ -154,6 +177,10 @@ const Admin = () => {
         { event: "INSERT", schema: "public", table: "applications" },
         () => {
           fetchApplications();
+          toast({
+            title: "New Application",
+            description: "A new application has been submitted",
+          });
         }
       )
       .on(
@@ -161,6 +188,19 @@ const Admin = () => {
         { event: "INSERT", schema: "public", table: "page_views" },
         () => {
           fetchPageViews();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          if (payload.new.receiver_id === user?.id) {
+            fetchUnreadCounts();
+            toast({
+              title: "New Message",
+              description: "You have a new message from a customer",
+            });
+          }
         }
       )
       .subscribe();
@@ -200,7 +240,6 @@ const Admin = () => {
 
       if (error) throw error;
 
-      // Filter out admin users
       const { data: adminRoles } = await supabase
         .from("user_roles")
         .select("user_id")
@@ -284,7 +323,7 @@ const Admin = () => {
   }
 
   if (!user) {
-    return null; // Will redirect
+    return null;
   }
 
   return (
@@ -307,22 +346,35 @@ const Admin = () => {
           </div>
 
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-8">
+            <TabsList className="grid w-full grid-cols-6 mb-8">
               <TabsTrigger value="dashboard" className="gap-2">
                 <LayoutDashboard className="w-4 h-4" />
-                Dashboard
+                <span className="hidden sm:inline">Dashboard</span>
               </TabsTrigger>
               <TabsTrigger value="applications" className="gap-2">
                 <FileText className="w-4 h-4" />
-                Applications
+                <span className="hidden sm:inline">Applications</span>
               </TabsTrigger>
-              <TabsTrigger value="messages" className="gap-2">
+              <TabsTrigger value="messages" className="gap-2 relative">
                 <MessageSquare className="w-4 h-4" />
-                Messages
+                <span className="hidden sm:inline">Messages</span>
+                {Object.values(unreadCounts).reduce((a, b) => a + b, 0) > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {Object.values(unreadCounts).reduce((a, b) => a + b, 0)}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="email" className="gap-2">
+                <Mail className="w-4 h-4" />
+                <span className="hidden sm:inline">Email</span>
+              </TabsTrigger>
+              <TabsTrigger value="email-settings" className="gap-2">
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Email Settings</span>
               </TabsTrigger>
               <TabsTrigger value="settings" className="gap-2">
                 <Settings className="w-4 h-4" />
-                Settings
+                <span className="hidden sm:inline">Site Settings</span>
               </TabsTrigger>
             </TabsList>
 
@@ -368,115 +420,131 @@ const Admin = () => {
 
             {/* Applications Tab */}
             <TabsContent value="applications">
-          <Card className="p-6 mb-6 bg-card border-border">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <Label htmlFor="search" className="sr-only">Search</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="search"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search by tracking ID, name, phone, or email..."
-                    className="pl-10"
-                  />
+              <Card className="p-6 mb-6 bg-card border-border">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <Label htmlFor="search" className="sr-only">Search</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="search"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Search by tracking ID, name, phone, or email..."
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="w-full md:w-64">
+                    <Label htmlFor="status-filter" className="sr-only">Filter by Status</Label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger id="status-filter">
+                        <Filter className="w-4 h-4 mr-2" />
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="received">Received</SelectItem>
+                        <SelectItem value="under_verification">Under Verification</SelectItem>
+                        <SelectItem value="processing_at_institution">Processing</SelectItem>
+                        <SelectItem value="ready">Ready</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
-              <div className="w-full md:w-64">
-                <Label htmlFor="status-filter" className="sr-only">Filter by Status</Label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger id="status-filter">
-                    <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="received">Received</SelectItem>
-                    <SelectItem value="under_verification">Under Verification</SelectItem>
-                    <SelectItem value="processing_at_institution">Processing</SelectItem>
-                    <SelectItem value="ready">Ready</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </Card>
+              </Card>
 
-          {/* Applications Table */}
-          <Card className="shadow-card bg-card border-border overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                  <TableHeader>
-                  <TableRow>
-                    <TableHead>Tracking ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Institution</TableHead>
-                    <TableHead>Document</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                    <TableHead>Upload</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredApplications.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                        No applications found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredApplications.map((app) => (
-                      <TableRow key={app.id}>
-                        <TableCell className="font-mono font-semibold text-primary">{app.tracking_id}</TableCell>
-                        <TableCell>{app.full_name}</TableCell>
-                        <TableCell>{app.institution_name}</TableCell>
-                        <TableCell className="capitalize">{app.document_type.replace(/_/g, " ")}</TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div>{app.phone}</div>
-                            <div className="text-muted-foreground">{app.email}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{getStatusBadge(app.status)}</TableCell>
-                        <TableCell className="text-sm">
-                          {new Date(app.created_at).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={app.status}
-                            onValueChange={(value) => updateStatus(app.id, value)}
-                          >
-                            <SelectTrigger className="w-40">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="received">Received</SelectItem>
-                              <SelectItem value="under_verification">Under Verification</SelectItem>
-                              <SelectItem value="processing_at_institution">Processing</SelectItem>
-                              <SelectItem value="ready">Ready</SelectItem>
-                              <SelectItem value="completed">Completed</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          {app.status === "completed" && (
-                            <DocumentUpload
-                              applicationId={app.id}
-                              userId={app.email}
-                              onUploadComplete={fetchApplications}
-                            />
-                          )}
-                        </TableCell>
+              {/* Applications Table */}
+              <Card className="shadow-card bg-card border-border overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tracking ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Institution</TableHead>
+                        <TableHead>Document</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead>Notes</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Actions</TableHead>
+                        <TableHead>Upload</TableHead>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredApplications.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                            No applications found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredApplications.map((app) => (
+                          <TableRow key={app.id}>
+                            <TableCell className="font-mono font-semibold text-primary">{app.tracking_id}</TableCell>
+                            <TableCell>{app.full_name}</TableCell>
+                            <TableCell>{app.institution_name}</TableCell>
+                            <TableCell className="capitalize">{app.document_type.replace(/_/g, " ")}</TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <div>{app.phone}</div>
+                                <div className="text-muted-foreground">{app.email}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {app.notes ? (
+                                <div className="max-w-[200px]">
+                                  <div className="flex items-center gap-1 text-primary mb-1">
+                                    <StickyNote className="w-3 h-3" />
+                                    <span className="text-xs font-medium">Notes</span>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground truncate" title={app.notes}>
+                                    {app.notes}
+                                  </p>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>{getStatusBadge(app.status)}</TableCell>
+                            <TableCell className="text-sm">
+                              {new Date(app.created_at).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={app.status}
+                                onValueChange={(value) => updateStatus(app.id, value)}
+                              >
+                                <SelectTrigger className="w-40">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="received">Received</SelectItem>
+                                  <SelectItem value="under_verification">Under Verification</SelectItem>
+                                  <SelectItem value="processing_at_institution">Processing</SelectItem>
+                                  <SelectItem value="ready">Ready</SelectItem>
+                                  <SelectItem value="completed">Completed</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              {app.status === "completed" && (
+                                <DocumentUpload
+                                  applicationId={app.id}
+                                  userId={app.email}
+                                  onUploadComplete={fetchApplications}
+                                />
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
             </TabsContent>
 
             {/* Messages Tab */}
@@ -497,8 +565,12 @@ const Admin = () => {
                       customerUsers.map((customer) => (
                         <button
                           key={customer.id}
-                          onClick={() => setSelectedCustomer(customer.user_id)}
-                          className={`w-full text-left p-3 rounded-lg transition-all ${
+                          onClick={() => {
+                            setSelectedCustomer(customer.user_id);
+                            // Clear unread count for this customer
+                            setUnreadCounts(prev => ({ ...prev, [customer.user_id]: 0 }));
+                          }}
+                          className={`w-full text-left p-3 rounded-lg transition-all relative ${
                             selectedCustomer === customer.user_id
                               ? "bg-primary-light/30 border-2 border-primary"
                               : "bg-muted hover:bg-muted/80 border border-border"
@@ -508,6 +580,11 @@ const Admin = () => {
                             {customer.full_name || "Unknown User"}
                           </p>
                           <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                          {unreadCounts[customer.user_id] > 0 && (
+                            <span className="absolute top-2 right-2 bg-destructive text-destructive-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                              {unreadCounts[customer.user_id]}
+                            </span>
+                          )}
                         </button>
                       ))
                     )}
@@ -542,9 +619,24 @@ const Admin = () => {
               </div>
             </TabsContent>
 
-            {/* Settings Tab */}
+            {/* Email Tab */}
+            <TabsContent value="email">
+              <div className="max-w-2xl">
+                <EmailComposer />
+              </div>
+            </TabsContent>
+
+            {/* Email Settings Tab */}
+            <TabsContent value="email-settings">
+              <div className="max-w-2xl">
+                <EmailSettings />
+              </div>
+            </TabsContent>
+
+            {/* Site Settings Tab */}
             <TabsContent value="settings">
               <Card className="p-6 bg-card border-border max-w-3xl">
+                <h2 className="text-2xl font-bold text-foreground mb-6">Site Settings</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label htmlFor="contact_email">Contact Email</Label>

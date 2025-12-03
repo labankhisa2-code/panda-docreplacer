@@ -62,25 +62,36 @@ const ChatInterface = ({ currentUserId, otherUserId, otherUserName }: ChatInterf
 
   const subscribeToMessages = () => {
     const channel = supabase
-      .channel("messages")
+      .channel(`messages-${currentUserId}-${otherUserId}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "messages",
-          filter: `receiver_id=eq.${currentUserId}`,
         },
         (payload) => {
-          if (payload.new.sender_id === otherUserId) {
-            setMessages((prev) => [...prev, payload.new as Message]);
-            markAsRead();
-            
-            // Show notification for new message
-            toast({
-              title: "New message from " + otherUserName,
-              description: (payload.new as Message).content,
+          const newMsg = payload.new as Message;
+          // Check if message is between current user and other user
+          const isRelevant = 
+            (newMsg.sender_id === currentUserId && newMsg.receiver_id === otherUserId) ||
+            (newMsg.sender_id === otherUserId && newMsg.receiver_id === currentUserId);
+          
+          if (isRelevant) {
+            setMessages((prev) => {
+              // Avoid duplicates
+              if (prev.some(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
             });
+            
+            // Mark as read if received
+            if (newMsg.sender_id === otherUserId) {
+              markAsRead();
+              toast({
+                title: "New message from " + otherUserName,
+                description: newMsg.content,
+              });
+            }
           }
         }
       )
